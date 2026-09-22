@@ -7,3 +7,6 @@
 [submodule "mcp_agent_docparser"]
 	path = mcp_agent_docparser
 	url = git@github.com:ChristofMilius/mcp-agent-docparser.git
+[submodule "mcp_agent_transcriber"]
+	path = mcp_agent_transcriber
+	url = git@github.com:ChristofMilius/mcp-agent-transcriber.git
