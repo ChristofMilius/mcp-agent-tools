@@ -11,6 +11,7 @@ index; it contains no tool code itself.
 |---|---|---|
 | mcp-agent-mail | `mcp_agent_mail` | Encrypted email + PGP MCP server — read/send/reply mail, contact book with key provenance, archive & search. Keys and bodies never reach the model context window. |
 | mcp-agent-playwright | `mcp_agent_playwright` | Playwright browser automation MCP server — drives its own browser or attaches to a running Brave/Chrome over CDP; accessibility snapshots, click/type/evaluate. |
+| mcp-agent-docparser | `mcp_agent_docparser` | SDK documentation extractor MCP server — probe a docs site, save parsing receipts, emit clean timestamped .md files via doc_parse tools. |
 
 ## Tool lifecycle
 
