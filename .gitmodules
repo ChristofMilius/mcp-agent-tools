@@ -1,3 +1,6 @@
 [submodule "mcp_agent_mail"]
 	path = mcp_agent_mail
 	url = https://github.com/ChristofMilius/mcp-agent-mail.git
+[submodule "mcp_agent_playwright"]
+	path = mcp_agent_playwright
+	url = git@github.com:ChristofMilius/mcp-agent-playwright.git
