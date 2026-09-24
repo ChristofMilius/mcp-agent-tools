@@ -13,6 +13,7 @@ index; it contains no tool code itself.
 | mcp-agent-playwright | `mcp_agent_playwright` | Playwright browser automation MCP server — drives its own browser or attaches to a running Brave/Chrome over CDP; accessibility snapshots, click/type/evaluate. |
 | mcp-agent-docparser | `mcp_agent_docparser` | SDK documentation extractor MCP server — probe a docs site, save parsing receipts, emit clean timestamped .md files via doc_parse tools. |
 | mcp-agent-transcriber | `mcp_agent_transcriber` | Video transcription MCP server — grab a direct transcript from tube platforms or download audio and transcribe with local Whisper. |
+| mcp-agent-openjev | `mcp_agent_openjev` | Local typed probabilistic decision service — Choice/Noul/Score with calibrated probabilities over OpenJev + LM Studio logprobs, as an MCP server + CLI. |
 
 ## Tool lifecycle
 
