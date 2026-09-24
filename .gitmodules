@@ -10,3 +10,6 @@
 [submodule "mcp_agent_transcriber"]
 	path = mcp_agent_transcriber
 	url = git@github.com:ChristofMilius/mcp-agent-transcriber.git
+[submodule "mcp_agent_openjev"]
+	path = mcp_agent_openjev
+	url = git@github.com:ChristofMilius/mcp-agent-openjev.git
