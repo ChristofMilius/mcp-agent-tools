@@ -51,8 +51,11 @@ Line by line:
 - `astral-sh/setup-uv@v6` — installs uv, puts it on PATH.
 - `setup-python@v5` with `python-version-file` — reads `.python-version` so CI
   uses the exact same Python as local.
-- `uv sync --frozen` — installs the environment **exactly** from `uv.lock`; fails
-  if the lock is stale instead of silently upgrading.
+- `uv sync --frozen --all-extras` — installs the environment **exactly** from `uv.lock`
+  (fails if the lock is stale instead of silently upgrading). `--all-extras` is
+  **required**: this stack puts `ruff`/`pytest` in `[project.optional-dependencies]
+  dev`, and uv does NOT install optional extras by default. Plain `uv sync`
+  silently skips them → `uv run ruff` fails with "Failed to spawn: ruff".
 - `uv run ruff check .` — lint (same as running it locally).
 - `uv run pytest -q` — tests. The live-LM-Studio tests **auto-skip** on CI
   (no backend there); the 17 unit tests must pass.
@@ -75,6 +78,9 @@ Mirror of local: `uv run ruff check .` and `uv run pytest -q`.
   on endpoint reachability, so CI is green without a local backend. Keep that
   shape for every live test you add, or CI will brick on the serverless runner.
 - **`uv sync --frozen` over `uv sync`** — CI should reproduce, not innovate.
+  And because dev tooling lives in an **optional extra** (`dev=`), CI must use
+  `--all-extras` or ruff/pytest silently never install. Seen live: first CI run
+  red in 13s on exactly this.
 - **Actions versioning** — `@v4`/`@v5`/`@v6` pin a major; upgrades happen when you
   change the tag, not invisibly.
 - **Master, not main** — this stack's repos use `master`; the `on.push.branches`
