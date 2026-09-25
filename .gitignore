@@ -1,5 +1,10 @@
 *
 !.gitignore
+!LICENSE
 !README.md
 !github-actions-reference.md
 !.gitmodules
+!tools/
+!tools/**
+tools/**/__pycache__/
+tools/**/*.py[cod]

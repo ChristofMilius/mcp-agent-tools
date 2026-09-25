@@ -1,0 +1,23 @@
+{
+  "mcpServers": [
+    {
+      "id": "33333333-3333-4333-8333-333333333333",
+      "name": "playwright",
+      "enabled": true,
+      "connection": {
+        "type": "stdio",
+        "command": "uv",
+        "args": [
+          "--project",
+          "C:/launch-check-fixture/coordinator/mcp_agent_playwright",
+          "run",
+          "python",
+          "-m",
+          "mcp_agent_playwright"
+        ],
+        "env": {},
+        "cwd": "C:/launch-check-fixture/coordinator/mcp_agent_playwright"
+      }
+    }
+  ]
+}
