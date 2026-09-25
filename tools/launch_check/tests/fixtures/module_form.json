@@ -1,0 +1,24 @@
+{
+  "mcpServers": [
+    {
+      "id": "22222222-2222-4222-8222-222222222222",
+      "name": "openjev",
+      "enabled": true,
+      "connection": {
+        "type": "stdio",
+        "command": "uv",
+        "args": [
+          "--project",
+          "C:/launch-check-fixture/coordinator/mcp_agent_openjev",
+          "run",
+          "python",
+          "-m",
+          "mcp_agent_openjev",
+          "serve"
+        ],
+        "env": {},
+        "cwd": "C:/launch-check-fixture/coordinator/mcp_agent_openjev"
+      }
+    }
+  ]
+}

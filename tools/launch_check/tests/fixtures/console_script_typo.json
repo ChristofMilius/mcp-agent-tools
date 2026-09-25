@@ -1,0 +1,21 @@
+{
+  "mcpServers": [
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "name": "docparser",
+      "enabled": true,
+      "connection": {
+        "type": "stdio",
+        "command": "uv",
+        "args": [
+          "--project",
+          "C:/launch-check-fixture/coordinator/mcp_agent_docparser",
+          "run",
+          "mco-agent-docparser"
+        ],
+        "env": {},
+        "cwd": "C:/launch-check-fixture/coordinator/mcp_agent_docparser"
+      }
+    }
+  ]
+}
