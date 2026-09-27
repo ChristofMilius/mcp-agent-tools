@@ -93,16 +93,16 @@ Mirror of local: `uv run ruff check .` and `uv run pytest -q`.
 - **`--remote` needs `--init` or it silently no-ops** — on a checkout whose
   submodules were never cloned, `git submodule update --remote` moves nothing
   and **still exits 0**. `actions/checkout` does not initialise submodules
-  unless you pass `submodules:`. Use `--init --remote`, or the bump job
-  cheerfully reports "already at master tip" forever. Seen live, same day.
+  unless you pass `submodules:`. Use `--init --remote`. Seen live, same day as
+  the `--locked` finding above.
 - **Scheduled workflows are disabled after 60 days without repo activity** — a
-  bump job on an idle stack stops firing with no error. Trigger it manually
-  (`workflow_dispatch`) if the PRs stop arriving.
-- **Public child repos need no deploy key** — the bump job rewrites
-  `git@github.com:` to `https://github.com/` at runtime with
-  `git config --global url."https://github.com/".insteadOf "git@github.com:"`,
-  so `.gitmodules` keeps SSH URLs for local work and CI still clones without a
-  secret. Would need a deploy key or PAT per repo if they were private.
+  `schedule:` job on an idle repo stops firing with no error and no failed run.
+  If one ever goes quiet, check this before debugging the job itself.
+- **Cloning a public repo in CI needs no secret** — for SSH submodule URLs,
+  rewrite them at runtime with
+  `git config --global url."https://github.com/".insteadOf "git@github.com:"`.
+  No deploy key, no PAT, and the committed URLs stay SSH for local work. A
+  private repo would need a deploy key or a token instead.
 - **Actions versioning** — `@v4`/`@v5`/`@v6` pin a major; upgrades happen when you
   change the tag, not invisibly.
 - **Master, not main** — this stack's repos use `master`; the `on.push.branches`
@@ -114,7 +114,6 @@ Mirror of local: `uv run ruff check .` and `uv run pytest -q`.
 - Every tool repo got the same CI when it was onboarded. If a tool lacks
   `.github/workflows/ci.yml`, its workflow file is missing or `.github/` isn't
   whitelisted in its `.gitignore`.
-- Lint/test CI lives in each **tool** repo, not in the coordinator. The
-  coordinator has no code to test — it only carries `.github/workflows/bump-submodules.yml`,
-  which advances the pointers and opens a PR. See the coordinator README's
-  *Pinning* section for why the pointers are recorded commits at all.
+- Lint/test CI lives in each **tool** repo. The coordinator has no code to test
+  and no workflows: it holds `stack.toml`, a manifest, not a container. See the
+  coordinator README's *Why a manifest and not submodules* for the reasoning.
