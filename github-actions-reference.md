@@ -58,8 +58,10 @@ Line by line:
   dev`, and uv does NOT install optional extras by default. Plain `uv sync`
   silently skips them → `uv run ruff` fails with "Failed to spawn: ruff".
 - `uv run ruff check .` — lint (same as running it locally).
-- `uv run pytest -q` — tests. The live-LM-Studio tests **auto-skip** on CI
-  (no backend there); the 17 unit tests must pass.
+- `uv run pytest -q` — tests. The live-LM-Studio tests **auto-skip** when there
+  is no backend reachable, which is the case on CI. A healthy run is
+  `13 passed, 3 skipped` — check the counts, not just the exit code, or a suite
+  that has silently lost backend coverage still looks green.
 
 Mirror of local: `uv run ruff check .` and `uv run pytest -q`.
 
