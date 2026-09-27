@@ -1,8 +1,9 @@
 # mcp-agent-tools
 
 Coordinating repository for a stack of MCP agent tools. Every tool is a git
-**submodule**, pinned at the commit its code lives in — each keeps its own
-remote and can be developed and pushed independently. This repo is the index;
+**submodule** that declares `branch = master`, so the stack can be advanced to
+each tool's `master` tip with one `--remote` call — each keeps its own remote
+and can be developed and pushed independently. This repo is the index;
 it contains no tool code itself, plus a small stdlib-only launcher checker and
 its tests under `tools/`.
 
@@ -68,19 +69,62 @@ git submodule add https://github.com/<owner>/<repo>.git <path>
 git commit -m "stack: add <tool> as submodule"
 ```
 
-**Clone the stack** (gets every pinned tool at the recorded commit):
+**Clone the stack** (gets every tool at the commit this repo records — see
+[Pinning](#pinning) for why that is not automatically the `master` tip):
 
 ```bash
 git clone https://github.com/ChristofMilius/mcp-agent-tools.git
 git submodule update --init --recursive
 ```
 
-**Update a pinned tool** after pushing new commits in its own repo:
+**Advance the stack to each tool's `master` tip** — normally you do nothing,
+the [bump workflow](#bumping) opens a pull request for you. To do it by hand
+after pushing commits in the child repos:
 
 ```bash
-cd <path> && git pull origin master
-cd .. && git add <path> && git commit -m "stack: bump <tool>"
+git submodule update --init --remote --recursive
+git add -A
+git status --short        # review every moved pointer before committing
+git commit -m "stack: bump tools to master"
 ```
 
-> The parent repo pins each tool at a commit. Updating a tool's pointer here
-> is a deliberate, separate commit — no tool is ever silently moved.
+> `--remote` moves every submodule it can reach, so a busy child repo will show
+> up in the same commit as an unrelated one. Use
+> `git submodule update --init --remote <path>` to advance one tool at a time.
+>
+> `--init` is not optional here. On a checkout where the submodules were never
+> cloned, plain `--remote` silently does nothing and still exits 0.
+
+## Bumping
+
+`.github/workflows/bump-submodules.yml` runs every six hours and on demand
+from the Actions tab. It advances all five pointers to their `master` tips and,
+if anything moved, opens (or refreshes) a pull request titled
+`stack: bump tools to their master tip`. Review the submodule diff and merge.
+
+The child repos are public, so the job clones them over HTTPS with no secret
+and no deploy key — it rewrites the SSH URLs in `.gitmodules` to HTTPS at
+runtime rather than changing them on disk.
+
+The bot only ever sees **pushed** commits. A tool with unpushed work on
+`master` looks unchanged to it.
+
+## Pinning
+
+A submodule entry in this repo's tree is a **gitlink**: mode `160000` holding
+one commit SHA. Git has no representation for "this submodule tracks a branch",
+so the tree always names a commit.
+
+`branch = master` in `.gitmodules` therefore does not make a fresh clone follow
+`master`. `git submodule update --init` reads the SHA from the index and checks
+out exactly that commit. What `branch = master` changes is the resolution of
+`--remote`: it makes `git submodule update --remote` fetch and check out
+`origin/master` for that submodule instead of the remote's default `HEAD`, so
+the declared tracking intent is explicit and identical for all five tools
+rather than depending on whatever each remote's `HEAD` happens to point at.
+
+The practical consequence: **the stack only reflects the newest child commits
+after a bump lands here.** That is at most one workflow interval, and you can
+force it at any time with the manual trigger. The recorded SHA is what makes
+`clone` + `submodule update` reproduce a known-good stack rather than whatever
+happened to be on `master` today.
