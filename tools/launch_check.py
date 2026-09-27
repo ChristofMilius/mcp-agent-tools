@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import configparser
 import copy
 import difflib
 import json
@@ -208,6 +207,8 @@ class LaunchAssessment:
 
 HelpRunner = Callable[[ToolSpec, Sequence[str], str | None], HelpResult]
 
+MANIFEST_NAME = "stack.toml"
+
 
 def _name_key(value: Any) -> str:
     text = str(value).casefold()
@@ -233,43 +234,66 @@ def _alias_keys(values: Iterable[str]) -> tuple[str, ...]:
     return tuple(sorted(result))
 
 
-def _submodule_paths(gitmodules: Path) -> tuple[list[str], list[str]]:
-    parser = configparser.RawConfigParser()
-    errors: list[str] = []
-    try:
-        with gitmodules.open("r", encoding="utf-8") as stream:
-            parser.read_file(stream)
-    except OSError as exc:
-        return [], [f"cannot read .gitmodules: {exc}"]
-    except configparser.Error as exc:
-        return [], [f"malformed .gitmodules: {exc}"]
+@dataclass
+class ManifestEntry:
+    directory: str
+    project_name: str
+    script_name: str
+    target_module: str
+    repository: str = ""
+    branch: str = ""
 
-    paths: list[str] = []
+
+def _manifest_entries(manifest: Path) -> tuple[list[ManifestEntry], list[str]]:
+    try:
+        with manifest.open("rb") as stream:
+            data = tomllib.load(stream)
+    except OSError as exc:
+        return [], [f"cannot read {manifest.name}: {exc}"]
+    except tomllib.TOMLDecodeError as exc:
+        return [], [f"malformed {manifest.name}: {exc}"]
+
+    raw_tools = data.get("tool")
+    if not isinstance(raw_tools, list) or not raw_tools:
+        return [], [f"{manifest.name} declares no [[tool]] entries"]
+
+    required = ("directory", "project_name", "script_name", "target_module")
+    entries: list[ManifestEntry] = []
+    errors: list[str] = []
     seen: set[str] = set()
-    for section in parser.sections():
-        if not section.casefold().startswith("submodule"):
+    for index, raw in enumerate(raw_tools, start=1):
+        if not isinstance(raw, dict):
+            errors.append(f"[[tool]] #{index} is not a table")
             continue
-        try:
-            raw_path = parser.get(section, "path")
-        except (configparser.Error, KeyError):
-            errors.append(f"{section}: missing path")
+        missing = [
+            key
+            for key in required
+            if not isinstance(raw.get(key), str) or not raw[key].strip()
+        ]
+        if missing:
+            errors.append(f"[[tool]] #{index} is missing {', '.join(missing)}")
             continue
-        raw_path = raw_path.strip()
-        if len(raw_path) >= 2 and raw_path[0] == raw_path[-1] and raw_path[0] in "\"'":
-            raw_path = raw_path[1:-1]
-        path = Path(raw_path)
+        directory = raw["directory"].strip()
+        path = Path(directory)
         if path.is_absolute() or ".." in path.parts:
-            errors.append(f"{section}: unsafe path {raw_path!r}")
+            errors.append(f"[[tool]] #{index} has an unsafe directory {directory!r}")
             continue
         normalized = path.as_posix()
         if normalized in seen:
-            errors.append(f"{section}: duplicate path {raw_path!r}")
+            errors.append(f"[[tool]] #{index} repeats directory {directory!r}")
             continue
         seen.add(normalized)
-        paths.append(normalized)
-    if not paths and not errors:
-        errors.append("no submodule paths found")
-    return paths, errors
+        entries.append(
+            ManifestEntry(
+                directory=normalized,
+                project_name=raw["project_name"].strip(),
+                script_name=raw["script_name"].strip(),
+                target_module=raw["target_module"].strip(),
+                repository=str(raw.get("repository", "")).strip(),
+                branch=str(raw.get("branch", "")).strip(),
+            )
+        )
+    return entries, errors
 
 
 def _load_tool_spec(tool_dir: Path, relative_path: str) -> tuple[ToolSpec | None, list[Finding]]:
@@ -336,29 +360,47 @@ def _load_tool_spec(tool_dir: Path, relative_path: str) -> tuple[ToolSpec | None
     )
 
 
+def _tool_spec_from_manifest(entry: ManifestEntry, tool_dir: Path) -> ToolSpec:
+    target_module = entry.target_module.split(":", 1)[0]
+    package = target_module.split(".", 1)[0]
+    aliases = _alias_keys(
+        (entry.project_name, entry.script_name, entry.directory, Path(entry.directory).name)
+    )
+    return ToolSpec(
+        directory=tool_dir,
+        relative_path=entry.directory,
+        project_name=entry.project_name,
+        script_name=entry.script_name,
+        target_module=target_module,
+        package=package,
+        has_main=True,
+        alias_keys=aliases,
+        metadata_error=(
+            f"{entry.directory} is not cloned here, so its launch details come "
+            f"from {MANIFEST_NAME} and are unverified"
+        ),
+    )
+
+
 def load_inventory(repo_root: Path) -> tuple[list[ToolSpec], list[Finding]]:
-    relative_paths, errors = _submodule_paths(repo_root / ".gitmodules")
-    findings = [
-        Finding("FAIL", "inventory-gitmodules", message) for message in errors
-    ]
+    entries, errors = _manifest_entries(repo_root / MANIFEST_NAME)
+    findings = [Finding("FAIL", "inventory-manifest", message) for message in errors]
     tools: list[ToolSpec] = []
-    seen: set[str] = set()
-    for relative_path in relative_paths:
-        if relative_path in seen:
-            continue
-        seen.add(relative_path)
-        tool_dir = (repo_root / relative_path).resolve()
+    for entry in entries:
+        tool_dir = (repo_root / entry.directory).resolve()
         if not tool_dir.is_dir():
+            tools.append(_tool_spec_from_manifest(entry, tool_dir))
             findings.append(
                 Finding(
-                    "FAIL",
-                    "inventory-missing-tool",
-                    f"submodule directory does not exist: {relative_path}",
-                    tool=relative_path,
+                    "INFO",
+                    "inventory-source-absent",
+                    f"{entry.directory} is not cloned here; using the launch details "
+                    f"recorded in {MANIFEST_NAME}",
+                    tool=entry.directory,
                 )
             )
             continue
-        spec, spec_findings = _load_tool_spec(tool_dir=tool_dir, relative_path=relative_path)
+        spec, spec_findings = _load_tool_spec(tool_dir=tool_dir, relative_path=entry.directory)
         findings.extend(spec_findings)
         if spec is not None:
             tools.append(spec)
@@ -603,7 +645,7 @@ def assess_launch(
     if not _same_path(args[1], spec.directory):
         return _launch_issue(
             "bad-project-dir",
-            "project directory does not match the derived coordinator submodule directory",
+            "project directory does not match the tool directory named in the manifest",
         )
 
     rest = args[3:]

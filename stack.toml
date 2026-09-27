@@ -1,0 +1,65 @@
+# Inventory for the mcp-agent stack.
+#
+# This file is the single source of truth for which tools exist, where each one
+# lives, and how it is launched. tools/launch_check.py reads it to decide what
+# to validate against an LM Studio MCP configuration, which means the checker
+# works on a bare clone of this repository with no tool sources present.
+#
+# project_name, script_name and target_module mirror each tool's pyproject.toml.
+# When a tool's checkout sits next to this repository, launch_check.py reads the
+# real pyproject.toml and these fields are only a fallback. When a tool changes
+# its entry point, update the row here too.
+#
+# See the README section "Stack manifest" for how to add a tool.
+
+schema = 1
+
+[[tool]]
+name = "mcp-agent-docparser"
+directory = "mcp_agent_docparser"
+repository = "https://github.com/ChristofMilius/mcp-agent-docparser.git"
+branch = "master"
+project_name = "mcp-agent-docparser"
+script_name = "mcp-agent-docparser"
+target_module = "mcp_agent_docparser:main"
+purpose = "SDK documentation extractor MCP server - probe a docs site, save parsing receipts, emit clean timestamped .md files."
+
+[[tool]]
+name = "mcp-agent-mail"
+directory = "mcp_agent_mail"
+repository = "https://github.com/ChristofMilius/mcp-agent-mail.git"
+branch = "master"
+project_name = "mcp-agent-mail"
+script_name = "mcp-agent-mail"
+target_module = "mcp_agent_mail:main"
+purpose = "Encrypted email and PGP MCP server - read, send and reply mail, contact book with key provenance, archive and search."
+
+[[tool]]
+name = "mcp-agent-openjev"
+directory = "mcp_agent_openjev"
+repository = "https://github.com/ChristofMilius/mcp-agent-openjev.git"
+branch = "master"
+project_name = "mcp-agent-openjev"
+script_name = "mcp-agent-openjev"
+target_module = "mcp_agent_openjev:main"
+purpose = "Local typed probabilistic decision service - Choice/Noul/Score with calibrated probabilities, as an MCP server and CLI."
+
+[[tool]]
+name = "mcp-agent-playwright"
+directory = "mcp_agent_playwright"
+repository = "https://github.com/ChristofMilius/mcp-agent-playwright.git"
+branch = "master"
+project_name = "mcp-agent-playwright"
+script_name = "mcp-agent-playwright"
+target_module = "mcp_agent_playwright.server:main"
+purpose = "Playwright browser automation MCP server - drives its own browser or attaches to a running one over CDP."
+
+[[tool]]
+name = "mcp-agent-transcriber"
+directory = "mcp_agent_transcriber"
+repository = "https://github.com/ChristofMilius/mcp-agent-transcriber.git"
+branch = "master"
+project_name = "mcp-agent-transcriber"
+script_name = "mcp-agent-transcriber"
+target_module = "mcp_agent_transcriber:main"
+purpose = "Video transcription MCP server - grab a direct transcript from tube platforms, or download audio and transcribe with local Whisper."
