@@ -1,29 +1,37 @@
 # mcp-agent-tools
 
-Coordinating repository for a stack of MCP agent tools. Every tool is a git
-**submodule** that declares `branch = master`, so the stack can be advanced to
-each tool's `master` tip with one `--remote` call — each keeps its own remote
-and can be developed and pushed independently. This repo is the index;
-it contains no tool code itself, plus a small stdlib-only launcher checker and
-its tests under `tools/`.
+Coordinating repository for a stack of MCP agent tools. This repo is the
+**index**, not a container: it holds no tool code, and it does not download or
+pin any. Each tool is an independent repository listed in `stack.toml`, and you
+clone the ones you actually want. What lives here is the manifest plus a small
+stdlib-only launcher checker and its tests under `tools/`.
+
+Nothing in this repository can go stale. There is no recorded commit to fall
+behind, no submodule to re-point, and nothing to bump.
 
 ## Stack
 
-| Tool | Submodule | Purpose |
+`stack.toml` is the single source of truth. This table is a reading of it.
+
+| Tool | Clone as | Purpose |
 |---|---|---|
+| mcp-agent-docparser | `mcp_agent_docparser` | SDK documentation extractor MCP server — probe a docs site, save parsing receipts, emit clean timestamped .md files. |
 | mcp-agent-mail | `mcp_agent_mail` | Encrypted email + PGP MCP server — read/send/reply mail, contact book with key provenance, archive & search. Keys and bodies never reach the model context window. |
-| mcp-agent-playwright | `mcp_agent_playwright` | Playwright browser automation MCP server — drives its own browser or attaches to a running Brave/Chrome over CDP; accessibility snapshots, click/type/evaluate. |
-| mcp-agent-docparser | `mcp_agent_docparser` | SDK documentation extractor MCP server — probe a docs site, save parsing receipts, emit clean timestamped .md files via doc_parse tools. |
+| mcp-agent-openjev | `mcp_agent_openjev` | Local typed probabilistic decision service — Choice/Noul/Score with calibrated probabilities, as an MCP server + CLI. |
+| mcp-agent-playwright | `mcp_agent_playwright` | Playwright browser automation MCP server — drives its own browser or attaches to a running Brave/Chrome over CDP. |
 | mcp-agent-transcriber | `mcp_agent_transcriber` | Video transcription MCP server — grab a direct transcript from tube platforms or download audio and transcribe with local Whisper. |
-| mcp-agent-openjev | `mcp_agent_openjev` | Local typed probabilistic decision service — Choice/Noul/Score with calibrated probabilities over OpenJev + LM Studio logprobs, as an MCP server + CLI. |
 
 ## Launcher checker
 
 `tools/launch_check.py` checks LM Studio MCP launch configurations before LM
-Studio tries to spawn a server. It reads `.gitmodules` for the tool inventory,
-then reads each tool's `pyproject.toml` with the standard-library `tomllib`.
-The checker derives the console-script name and package from the script target;
-it does not maintain a hardcoded tool list. It accepts both documented
+Studio tries to spawn a server. It reads `stack.toml` for the tool inventory.
+When a tool's checkout happens to sit next to this repository it also reads that
+tool's `pyproject.toml` with the standard-library `tomllib` and treats it as
+authoritative; otherwise it uses the launch details recorded in the manifest. It
+therefore runs on a bare clone of this repository with no tool sources present,
+reporting each absent tool as `inventory-source-absent` (informational). The
+checker derives the console-script name and package from the script target; it
+does not maintain a hardcoded tool list. It accepts both documented
 `uv --project <dir> run python -m <package> [subcommand]` and
 `uv --project <dir> run <console-script> [subcommand]` forms when their
 preconditions exist. Configured subcommands are verified against the server's
@@ -60,71 +68,69 @@ write the real LM Studio configuration:
 python -m unittest
 ```
 
-## Tool lifecycle
+## Stack manifest
 
-**Add a tool** (it must already be a repo pushed to GitHub):
+**Add a tool** — push the tool's own repository to GitHub first, then add one
+`[[tool]]` block to `stack.toml`:
 
-```bash
-git submodule add https://github.com/<owner>/<repo>.git <path>
-git commit -m "stack: add <tool> as submodule"
+```toml
+[[tool]]
+name = "mcp-agent-foo"
+directory = "mcp_agent_foo"
+repository = "https://github.com/<owner>/<repo>.git"
+branch = "master"
+project_name = "mcp-agent-foo"
+script_name = "mcp-agent-foo"
+target_module = "mcp_agent_foo:main"
+purpose = "One line on what it does."
 ```
 
-**Clone the stack** (gets every tool at the commit this repo records — see
-[Pinning](#pinning) for why that is not automatically the `master` tip):
+Then add the row to the table above. `directory`, `project_name`, `script_name`
+and `target_module` are the required fields; `name`, `repository`, `branch` and
+`purpose` are for humans. Copy `project_name` and `target_module` out of the
+tool's own `pyproject.toml` so the two agree.
+
+**Get a tool.** Clone it wherever you want it:
 
 ```bash
-git clone https://github.com/ChristofMilius/mcp-agent-tools.git
-git submodule update --init --recursive
+git clone https://github.com/ChristofMilius/mcp-agent-openjev.git
 ```
 
-**Advance the stack to each tool's `master` tip** — normally you do nothing,
-the [bump workflow](#bumping) opens a pull request for you. To do it by hand
-after pushing commits in the child repos:
+A tool does not need to live next to this repository. The launcher checker uses
+`pyproject.toml` when the checkout is there and the manifest when it is not.
 
-```bash
-git submodule update --init --remote --recursive
-git add -A
-git status --short        # review every moved pointer before committing
-git commit -m "stack: bump tools to master"
-```
+**Update a tool.** Nothing to do here. The tool's own repository is the source
+of truth for its code, and this manifest cannot fall behind it.
 
-> `--remote` moves every submodule it can reach, so a busy child repo will show
-> up in the same commit as an unrelated one. Use
-> `git submodule update --init --remote <path>` to advance one tool at a time.
->
-> `--init` is not optional here. On a checkout where the submodules were never
-> cloned, plain `--remote` silently does nothing and still exits 0.
+## Why a manifest and not submodules
 
-## Bumping
+This repository used to track each tool as a git submodule. That was replaced
+because a submodule cannot do the one thing a coordinator wants: stay current
+without ceremony.
 
-`.github/workflows/bump-submodules.yml` runs every six hours and on demand
-from the Actions tab. It advances all five pointers to their `master` tips and,
-if anything moved, opens (or refreshes) a pull request titled
-`stack: bump tools to their master tip`. Review the submodule diff and merge.
+A submodule entry in a git tree is a **gitlink** — mode `160000` holding one
+commit SHA. Git has no way to record "this tracks a branch", so the tree always
+names a commit and goes stale the moment the tool's `master` moves. Keeping it
+current meant either remembering to bump five pointers by hand, or adding a
+scheduled workflow to bump them for you, which then needed reviewing, and could
+still record a pointer to a commit that had not been pushed yet.
 
-The child repos are public, so the job clones them over HTTPS with no secret
-and no deploy key — it rewrites the SSH URLs in `.gitmodules` to HTTPS at
-runtime rather than changing them on disk.
+A manifest holds no version, so there is nothing to be out of date. The costs
+are real and worth stating plainly:
 
-The bot only ever sees **pushed** commits. A tool with unpushed work on
-`master` looks unchanged to it.
+- `git clone` of this repository no longer gives you the stack. Clone the tools
+  you want.
+- There is no git-enforced "these five versions work together". If that matters,
+  record it by hand in the table below.
 
-## Pinning
+### Last verified combination
 
-A submodule entry in this repo's tree is a **gitlink**: mode `160000` holding
-one commit SHA. Git has no representation for "this submodule tracks a branch",
-so the tree always names a commit.
+Updated deliberately when you test the stack, not on every commit.
 
-`branch = master` in `.gitmodules` therefore does not make a fresh clone follow
-`master`. `git submodule update --init` reads the SHA from the index and checks
-out exactly that commit. What `branch = master` changes is the resolution of
-`--remote`: it makes `git submodule update --remote` fetch and check out
-`origin/master` for that submodule instead of the remote's default `HEAD`, so
-the declared tracking intent is explicit and identical for all five tools
-rather than depending on whatever each remote's `HEAD` happens to point at.
-
-The practical consequence: **the stack only reflects the newest child commits
-after a bump lands here.** That is at most one workflow interval, and you can
-force it at any time with the manual trigger. The recorded SHA is what makes
-`clone` + `submodule update` reproduce a known-good stack rather than whatever
-happened to be on `master` today.
+| Tool | Verified at |
+|---|---|
+| mcp-agent-docparser | _(not recorded)_ |
+| mcp-agent-mail | _(not recorded)_ |
+| mcp-agent-openjev | _(not recorded)_ |
+| mcp-agent-playwright | _(not recorded)_ |
+| mcp-agent-transcriber | _(not recorded)_ |
