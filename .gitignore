@@ -6,5 +6,7 @@
 !.gitmodules
 !tools/
 !tools/**
+!.github/
+!.github/**
 tools/**/__pycache__/
 tools/**/*.py[cod]
