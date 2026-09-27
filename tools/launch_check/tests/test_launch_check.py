@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import shutil
 import sys
 import tempfile
 import unittest
@@ -37,13 +38,18 @@ class LaunchCheckTests(unittest.TestCase):
             "mcp_agent_playwright": ("mcp-agent-playwright", "mcp_agent_playwright.server:main"),
             "mcp_agent_openjev": ("mcp-agent-openjev", "mcp_agent_openjev:main"),
         }
-        lines = []
-        for index, (directory, (script, target)) in enumerate(tools.items(), start=1):
+        lines = ["schema = 1", ""]
+        for directory, (script, target) in tools.items():
             lines.extend(
                 [
-                    f'[submodule "tool{index}"]',
-                    f"\tpath = {directory}",
-                    f"\turl = https://example.invalid/{directory}.git",
+                    "[[tool]]",
+                    f'name = "{script}"',
+                    f'directory = "{directory}"',
+                    f'repository = "https://example.invalid/{directory}.git"',
+                    'branch = "master"',
+                    f'project_name = "{script}"',
+                    f'script_name = "{script}"',
+                    f'target_module = "{target}"',
                     "",
                 ]
             )
@@ -64,7 +70,7 @@ class LaunchCheckTests(unittest.TestCase):
             elif main_path.exists():
                 main_path.unlink()
             (tool_root / ".venv" / "Scripts" / f"{script}.exe").write_text("", encoding="utf-8")
-        (root / ".gitmodules").write_text("\n".join(lines), encoding="utf-8")
+        (root / "stack.toml").write_text("\n".join(lines), encoding="utf-8")
 
     def write_config(self, fixture_name: str, app: str = "bionic") -> Path:
         fixture = Path(__file__).resolve().parent / "fixtures" / fixture_name
@@ -128,6 +134,35 @@ class LaunchCheckTests(unittest.TestCase):
         report = self.check()
         self.assertEqual(report.fail_count, 0)
         self.assertIn("tool-not-configured", self.codes(report, "INFO"))
+
+    def test_manifest_alone_checks_configs_without_tool_sources(self) -> None:
+        for child in self.root.iterdir():
+            if child.is_dir():
+                shutil.rmtree(child)
+        self.write_config("console_script_typo.json")
+        report = self.check()
+        self.assertIn("inventory-source-absent", self.codes(report, "INFO"))
+        self.assertNotIn("inventory-missing-tool", self.codes(report, "FAIL"))
+        typo = next(finding for finding in report.findings if finding.code == "typo")
+        self.assertEqual(typo.suggestion["args"][-1], "mcp-agent-docparser")
+
+    def test_manifest_row_missing_launch_fields_fails(self) -> None:
+        manifest = self.root / "stack.toml"
+        text = manifest.read_text(encoding="utf-8")
+        manifest.write_text(text.replace('script_name = "mcp-agent-mail"\n', ""), encoding="utf-8")
+        report = self.check()
+        self.assertIn("inventory-manifest", self.codes(report, "FAIL"))
+
+    def test_manifest_rejects_unsafe_directory(self) -> None:
+        manifest = self.root / "stack.toml"
+        manifest.write_text(
+            manifest.read_text(encoding="utf-8").replace(
+                'directory = "mcp_agent_mail"', 'directory = "../escape"'
+            ),
+            encoding="utf-8",
+        )
+        report = self.check()
+        self.assertIn("inventory-manifest", self.codes(report, "FAIL"))
 
     def test_servers_key_is_accepted(self) -> None:
         path = self.write_config("module_form.json")
