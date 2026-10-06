@@ -1,10 +1,12 @@
 # mcp-agent-tools
 
 Coordinating repository for a stack of MCP agent tools. This repo is the
-**index**, not a container: it holds no tool code, and it does not download or
-pin any. Each tool is an independent repository listed in `stack.toml`, and you
-clone the ones you actually want. What lives here is the manifest plus a small
-stdlib-only launcher checker and its tests under `tools/`.
+**index**, not a container: it holds none of the stack's tool code, and it does
+not download or pin any. Each tool is an independent repository listed in
+`stack.toml`, and you clone the ones you actually want. What lives here is the
+manifest plus two standalone helpers that belong to no tool: a stdlib-only
+launcher checker (`tools/launch_check.py`, tests in `tests/`) and an orphaned
+opencode server reaper (`tools/reap_orphaned_opencode.ps1`).
 
 Nothing in this repository can go stale. There is no recorded commit to fall
 behind, no submodule to re-point, and nothing to bump.
@@ -25,8 +27,9 @@ behind, no submodule to re-point, and nothing to bump.
 
 `tools/launch_check.py` checks LM Studio MCP launch configurations before LM
 Studio tries to spawn a server. It reads `stack.toml` for the tool inventory.
-When a tool's checkout happens to sit next to this repository it also reads that
-tool's `pyproject.toml` with the standard-library `tomllib` and treats it as
+When a tool's checkout sits one level below this repository root — at the path
+named by its `directory` entry — the checker also reads that tool's
+`pyproject.toml` with the standard-library `tomllib` and treats it as
 authoritative; otherwise it uses the launch details recorded in the manifest. It
 therefore runs on a bare clone of this repository with no tool sources present,
 reporting each absent tool as `inventory-source-absent` (informational). The
@@ -61,12 +64,51 @@ near-match launch repairs atomically, and logs every change; it never invents or
 changes a server UUID, adds a missing entry, or rewrites an unknown/ambiguous
 configuration. `logs/` is ignored by the whitelist `.gitignore`.
 
-The tests use temporary directories and fixture JSON only; they never read or
-write the real LM Studio configuration:
+The tests live in `tests/` at the repository root and use temporary directories
+and fixture JSON only; they never read or write the real LM Studio
+configuration:
 
 ```bash
 python -m unittest
 ```
+
+## Reaper
+
+`tools/reap_orphaned_opencode.ps1` releases what opencode leaves behind when its
+desktop app closes. The app spawns `opencode-cli.exe serve --service`; closing
+the window does not stop that server, and every local MCP server the run booted
+stays resident for as long as the machine is on. The watcher removes the
+residue of a run that has already ended:
+
+    app dies -> server is orphaned -> reaper kills the server
+             -> each MCP child sees stdin EOF -> each exits cleanly
+
+Only the orphaned server is ever signalled, and only when all of these hold:
+its command line matches `serve --service`, its parent PID is no longer live,
+it has been continuously orphaned for `-GraceSeconds` (30 s), and it is not the
+watcher itself. The MCP children are never killed directly — they exit on
+their own on EOF, and killing a launcher would orphan its interpreter instead.
+
+Register it once at logon (no elevation required):
+
+```powershell
+$a = New-ScheduledTaskAction -Execute pwsh -Argument `
+    "-NoProfile -WindowStyle Hidden -File `"<repo>\tools\reap_orphaned_opencode.ps1`""
+$t = New-ScheduledTaskTrigger -AtLogOn
+Register-ScheduledTask -TaskName 'OpenCode-MCP-Reaper' -Action $a -Trigger $t `
+    -Description 'Reap orphaned opencode servers so MCP processes are released'
+```
+
+Before registering — or after any change — run one pass by hand:
+
+```powershell
+pwsh -NoProfile -File .\tools\reap_orphaned_opencode.ps1 -Once -DryRun
+```
+
+`-DryRun` logs every decision and kills nothing. The log is append-only at
+`%LOCALAPPDATA%\opencode-mcp-reaper\reaper.log`, one line per event
+(`ORPHAN` / `REAP` / `REAPED`). A running instance never reloads the script
+from disk, so restart the scheduled task after editing it.
 
 ## Stack manifest
 
@@ -96,8 +138,10 @@ tool's own `pyproject.toml` so the two agree.
 git clone https://github.com/ChristofMilius/mcp-agent-openjev.git
 ```
 
-A tool does not need to live next to this repository. The launcher checker uses
-`pyproject.toml` when the checkout is there and the manifest when it is not.
+A tool does not need to live here at all — the manifest describes every tool
+either way. For the checker to read a tool's own `pyproject.toml`, place that
+checkout one level below this repository root, at the `directory` path from
+`stack.toml`; otherwise the manifest is used.
 
 **Update a tool.** Nothing to do here. The tool's own repository is the source
 of truth for its code, and this manifest cannot fall behind it.
