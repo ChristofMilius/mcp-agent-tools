@@ -2,7 +2,6 @@
 !.gitignore
 !LICENSE
 !README.md
-!github-actions-reference.md
 !stack.toml
 !tools/
 !tools/**
