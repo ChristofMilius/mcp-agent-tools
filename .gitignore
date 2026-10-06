@@ -6,7 +6,11 @@
 !stack.toml
 !tools/
 !tools/**
+!tests/
+!tests/**
 !.github/
 !.github/**
 tools/**/__pycache__/
 tools/**/*.py[cod]
+tests/**/__pycache__/
+tests/**/*.py[cod]

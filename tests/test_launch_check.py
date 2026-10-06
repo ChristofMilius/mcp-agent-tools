@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 
 
-SCRIPT = Path(__file__).resolve().parents[2] / "launch_check.py"
+SCRIPT = Path(__file__).resolve().parents[1] / "tools" / "launch_check.py"
 SPEC = importlib.util.spec_from_file_location("launch_check_test_subject", SCRIPT)
 if SPEC is None or SPEC.loader is None:
     raise RuntimeError("could not load launch checker")
