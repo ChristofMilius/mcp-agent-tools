@@ -134,8 +134,14 @@ function Invoke-Pass {
     $servers = @(Get-MatchingServers -Name $ProcessName -Match $CommandLineMatch)
 
     # forget servers that are gone
+    # Project .ProcessId off the elements, never off the array itself: under
+    # Set-StrictMode -Version Latest, member enumeration on an EMPTY array
+    # throws "The property 'ProcessId' cannot be found on this object"
+    # instead of yielding $null. That aborted every pass while no server was
+    # running and a stale $state entry existed.
+    $livePids = @($servers | ForEach-Object { $_.ProcessId })
     foreach ($pidKey in @($state.Keys)) {
-        if ($servers.ProcessId -notcontains $pidKey) { $state.Remove($pidKey) }
+        if ($livePids -notcontains $pidKey) { $state.Remove($pidKey) }
     }
 
     foreach ($s in $servers) {
