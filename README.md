@@ -111,6 +111,36 @@ pwsh -NoProfile -File .\tools\reap_orphaned_opencode.ps1 -Once -DryRun
 (`ORPHAN` / `REAP` / `REAPED`). A running instance never reloads the script
 from disk, so restart the scheduled task after editing it.
 
+## Config reloads kill ad-hoc MCP servers
+
+Observed 2026-10-18 with the opencode desktop app, and worth knowing before
+editing `~/.config/opencode/opencode.jsonc` while a server is running. Any
+write to that file triggers a config reload within seconds. On reload, a
+server that is not explicitly enabled in the file is disconnected — and never
+reconnected. Enabling a server ad hoc via `/mcps` therefore survives only
+until the next config edit: every write to the file is a silent kill switch
+for it. Re-enable via `/mcps` afterwards; the respawned server picks up the
+changed config — changing an environment variable and setting the server
+enabled again brought it back with the new value within seconds.
+
+Two related quirks:
+
+- The `/mcps` enable toggle is not persisted. It works immediately, but the
+  file keeps its old state, so the next reload re-asserts the file and drops
+  the server again. Expected behaviour, not a bug to chase.
+- The file's `"enabled": false` spelling is legacy. The V2 docs prescribe
+  `"disabled": true` (an absent field means connect); the current build still
+  honours the legacy field, as the reload repro above proves. Migration is
+  optional cleanup — prefer the V2 spelling when a block is edited anyway,
+  and do not mix the two spellings.
+
+This is why every MCP server in this stack stays disabled by default, which
+in turn keeps the orphaned-server leak above small: the reaper only fires
+after the app dies, never mid-session, so a server left permanently enabled
+can still duplicate once per booted location while the app stays open. Do
+not leave a server permanently enabled just to survive config edits — enable
+on demand for testing, and expect it to go away after the next config change.
+
 ## Stack manifest
 
 **Add a tool** — push the tool's own repository to GitHub first, then add one
@@ -165,7 +195,7 @@ are real and worth stating plainly:
 
 - `git clone` of this repository no longer gives you the stack. Clone the tools
   you want.
-- There is no git-enforced "these five versions work together". If that matters,
+- There is no git-enforced "these six versions work together". If that matters,
   record it by hand in the table below.
 
 ### Last verified combination
