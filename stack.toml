@@ -15,6 +15,16 @@
 schema = 1
 
 [[tool]]
+name = "mcp-agent-chatterbox"
+directory = "mcp_agent_chatterbox"
+repository = "https://github.com/ChristofMilius/mcp-agent-chatterbox.git"
+branch = "master"
+project_name = "mcp-agent-chatterbox"
+script_name = "mcp-agent-chatterbox"
+target_module = "mcp_agent_chatterbox:main"
+purpose = "MCP server for local GPU-accelerated text-to-speech with Chatterbox - turbo, multilingual, and zero-shot voice cloning."
+
+[[tool]]
 name = "mcp-agent-docparser"
 directory = "mcp_agent_docparser"
 repository = "https://github.com/ChristofMilius/mcp-agent-docparser.git"
