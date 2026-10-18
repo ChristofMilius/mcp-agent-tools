@@ -82,7 +82,7 @@
 [CmdletBinding()]
 param(
     [int]    $PollSeconds      = 5,
-    [int]    $GraceSeconds     = 30,
+    [int]    $GraceSeconds     = 15,
     [string] $ProcessName      = 'opencode-cli.exe',
     [string] $CommandLineMatch = 'serve --service',
     [string] $ChildNamePattern = 'mcp-agent-*.exe',
