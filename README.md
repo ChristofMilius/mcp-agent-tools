@@ -86,7 +86,7 @@ residue of a run that has already ended:
 
 Only the orphaned server is ever signalled, and only when all of these hold:
 its command line matches `serve --service`, its parent PID is no longer live,
-it has been continuously orphaned for `-GraceSeconds` (30 s), and it is not the
+it has been continuously orphaned for `-GraceSeconds` (15 s), and it is not the
 watcher itself. The MCP children are never killed directly — they exit on
 their own on EOF, and killing a launcher would orphan its interpreter instead.
 
