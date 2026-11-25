@@ -22,7 +22,7 @@ branch = "master"
 project_name = "mcp-agent-chatterbox"
 script_name = "mcp-agent-chatterbox"
 target_module = "mcp_agent_chatterbox:main"
-purpose = "MCP server for local GPU-accelerated text-to-speech with Chatterbox - turbo, multilingual, and zero-shot voice cloning."
+purpose = "To be retired soon - replaced by the Chatterbox backend module in mcp-agent-tts. Legacy local GPU text-to-speech server."
 
 [[tool]]
 name = "mcp-agent-docparser"
@@ -73,3 +73,13 @@ project_name = "mcp-agent-transcriber"
 script_name = "mcp-agent-transcriber"
 target_module = "mcp_agent_transcriber:main"
 purpose = "Video transcription MCP server - grab a direct transcript from tube platforms, or download audio and transcribe with local Whisper."
+
+[[tool]]
+name = "mcp-agent-tts"
+directory = "mcp_agent_tts"
+repository = "https://github.com/ChristofMilius/mcp-agent-tts.git"
+branch = "main"
+project_name = "mcp-agent-tts"
+script_name = "mcp-agent-tts"
+target_module = "mcp_agent_tts:main"
+purpose = "General local text-to-speech MCP harness with switchable Chatterbox and LFM3 backends for agent voice output."

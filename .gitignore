@@ -4,9 +4,14 @@
 !README.md
 !stack.toml
 !tools/
-!tools/**
+!tools/__init__.py
+!tools/launch_check.py
+!tools/reap_orphaned_opencode.ps1
 !tests/
-!tests/**
+!tests/__init__.py
+!tests/test_launch_check.py
+!tests/fixtures/
+!tests/fixtures/*.json
 !.github/
 !.github/**
 tools/**/__pycache__/

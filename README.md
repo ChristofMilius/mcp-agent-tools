@@ -17,12 +17,13 @@ behind, no submodule to re-point, and nothing to bump.
 
 | Tool | Clone as | Purpose |
 |---|---|---|
-| mcp-agent-chatterbox | `mcp_agent_chatterbox` | Local GPU-accelerated text-to-speech MCP server — Chatterbox with turbo, multilingual, and zero-shot voice cloning. |
+| mcp-agent-chatterbox | `mcp_agent_chatterbox` | _To be retired soon_ — new home is the Chatterbox backend module in mcp-agent-tts. |
 | mcp-agent-docparser | `mcp_agent_docparser` | SDK documentation extractor MCP server — probe a docs site, save parsing receipts, emit clean timestamped .md files. |
 | mcp-agent-mail | `mcp_agent_mail` | Encrypted email + PGP MCP server — read/send/reply mail, contact book with key provenance, archive & search. Keys and bodies never reach the model context window. |
 | mcp-agent-openjev | `mcp_agent_openjev` | Local typed probabilistic decision service — Choice/Noul/Score with calibrated probabilities, as an MCP server + CLI. |
 | mcp-agent-playwright | `mcp_agent_playwright` | Playwright browser automation MCP server — drives its own browser or attaches to a running Brave/Chrome over CDP. |
 | mcp-agent-transcriber | `mcp_agent_transcriber` | Video transcription MCP server — grab a direct transcript from tube platforms or download audio and transcribe with local Whisper. |
+| mcp-agent-tts | `mcp_agent_tts` | General local text-to-speech MCP harness with switchable Chatterbox and LFM3 backends. |
 
 ## Launcher checker
 
